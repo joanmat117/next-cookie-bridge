@@ -32,21 +32,22 @@ export async function forwardCookiesToClient(
 
   for (const cookie of cookiesToSet) {
     try {
+      const path = config.forcePathRoot ? '/' : (cookie.path || '/');
+
       cookieStore.set({
         name: cookie.name,
         value: cookie.value,
-        httpOnly: cookie.httpOnly,
-        secure: isDev ? false : cookie.secure,
-        sameSite: cookie.sameSite,
-        path: config.forcePathRoot ? '/' : cookie.path,
+        httpOnly: cookie.httpOnly ?? true,
+        secure: isDev ? false : (cookie.secure ?? true),
+        sameSite: cookie.sameSite || 'lax',
+        path: path,
         maxAge: cookie.maxAge,
         expires: cookie.expires,
-        // domain is intentionally omitted
       });
     } catch (e) {
-      console.warn(
-        `[next-cookie-bridge] The cookie ${cookie.name} could not be set.`,
-      );
+      if (isDev) {
+        console.warn(`[next-cookie-bridge] Cannot set ${cookie.name} cookie :`, e instanceof Error ? e.message : e);
+      }
     }
   }
 }

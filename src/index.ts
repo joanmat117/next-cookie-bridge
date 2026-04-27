@@ -4,7 +4,7 @@ import { forwardCookiesToClient } from './forwarder.js';
 import { CookieForwardConfig } from './types.js';
 import { splitSetCookieString } from './parser.js';
 
-export type { CookieForwardConfig } from './types.js';
+export type { CookieForwardConfig, ParsedCookie } from './types.js';
 
 /**
  * Global Mode (Recommended for Node.js/instrumentation.ts)
