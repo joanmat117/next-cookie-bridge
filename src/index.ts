@@ -3,8 +3,11 @@ import { patchHttp } from './patches/http.js';
 import { forwardCookiesToClient, getClientCookiesHeader } from './forwarder.js';
 import { CookieForwardConfig } from './types.js';
 import { splitSetCookieString } from './parser.js';
+import debug from "debug"
 
 export type { CookieForwardConfig, ParsedCookie } from './types.js';
+
+const log = debug("next-cookie-bridge:init");
 
 /**
  * Global Mode (Recommended for Node.js/instrumentation.ts)
@@ -13,6 +16,7 @@ export type { CookieForwardConfig, ParsedCookie } from './types.js';
 export async function setupCookieAutoForward(config: CookieForwardConfig = {
   forwardClientCookies: true
 }) {
+  log("Initializing global patches with config: %O", config);
   patchGlobalFetch(config);
   await patchHttp(config);
 }
