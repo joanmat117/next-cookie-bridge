@@ -1,6 +1,8 @@
 export interface CookieForwardConfig {
   omit?: string[];
   forcePathRoot?: boolean;
+  forwardClientCookies?: boolean;
+  forwardOnly?: string[];
 }
 
 export interface ParsedCookie {

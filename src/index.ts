@@ -1,6 +1,6 @@
 import { patchGlobalFetch } from './patches/fetch.js';
 import { patchHttp } from './patches/http.js';
-import { forwardCookiesToClient } from './forwarder.js';
+import { forwardCookiesToClient, getClientCookiesHeader } from './forwarder.js';
 import { CookieForwardConfig } from './types.js';
 import { splitSetCookieString } from './parser.js';
 
@@ -10,7 +10,9 @@ export type { CookieForwardConfig, ParsedCookie } from './types.js';
  * Global Mode (Recommended for Node.js/instrumentation.ts)
  * Configure automatic fetch and http/https patching.
  */
-export async function setupCookieAutoForward(config: CookieForwardConfig = {}) {
+export async function setupCookieAutoForward(config: CookieForwardConfig = {
+  forwardClientCookies: true
+}) {
   patchGlobalFetch(config);
   await patchHttp(config);
 }
@@ -22,13 +24,25 @@ export async function setupCookieAutoForward(config: CookieForwardConfig = {}) {
 export async function fetchWithCookiesForward(
   input: RequestInfo | URL,
   init?: RequestInit,
-  config: CookieForwardConfig = {},
+  config: CookieForwardConfig = {
+    forwardClientCookies: true
+  },
 ): Promise<Response> {
-  const response = await fetch(input, init);
+
+  let finalInit = { ...init };
+  if (config.forwardClientCookies) {
+    const clientCookies = await getClientCookiesHeader(config.forwardOnly);
+    if (clientCookies) {
+      const headers = new Headers(finalInit.headers || {});
+      const existing = headers.get('cookie');
+      headers.set('cookie', existing ? `${existing}; ${clientCookies}` : clientCookies);
+      finalInit.headers = headers;
+    }
+  }
+
+  const response = await fetch(input, finalInit);
 
   let setCookies: string[] = [];
-
-  // Extract cookies using the modern standard or string fallback
   if (typeof response.headers.getSetCookie === 'function') {
     setCookies = response.headers.getSetCookie();
   } else {
@@ -38,7 +52,6 @@ export async function fetchWithCookiesForward(
     }
   }
 
-  // Attempt to forward to the client (will fail silently if it is a Server Component)
   await forwardCookiesToClient(setCookies, config);
 
   return response;

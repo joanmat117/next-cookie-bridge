@@ -12,7 +12,7 @@ export async function forwardCookiesToClient(
   const omitList = (config.omit || DEFAULT_OMIT_COOKIES).map((c) =>
     c.toLowerCase(),
   );
-  const isDev = process.env.NODE_ENV === 'development';
+  const isDev = typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
 
   const cookiesToSet = setCookieHeaders
     .map(parseSetCookieHeader)
@@ -52,5 +52,31 @@ export async function forwardCookiesToClient(
         );
       }
     }
+  }
+}
+
+export async function getClientCookiesHeader(
+  allowedCookies?: string[]
+): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    let allCookies = cookieStore.getAll();
+
+    if (allCookies.length === 0) return null;
+
+    if (allowedCookies && allowedCookies.length > 0) {
+      const allowedLower = allowedCookies.map(name => name.toLowerCase());
+      allCookies = allCookies.filter(c =>
+        allowedLower.includes(c.name.toLowerCase())
+      );
+    }
+
+    if (allCookies.length === 0) return null;
+
+    return allCookies
+      .map((c) => `${c.name}=${c.value}`)
+      .join('; ');
+  } catch (e) {
+    return null;
   }
 }

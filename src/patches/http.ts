@@ -1,5 +1,5 @@
 import { TRIGGER_HEADER, PATCH_SYMBOL_HTTP } from '../constants.js';
-import { forwardCookiesToClient } from '../forwarder.js';
+import { forwardCookiesToClient, getClientCookiesHeader } from '../forwarder.js';
 import { CookieForwardConfig } from '../types.js';
 
 export async function patchHttp(config: CookieForwardConfig) {
@@ -14,7 +14,8 @@ export async function patchHttp(config: CookieForwardConfig) {
 
     const patchMethod = (module: any) => {
       const originalRequest = module.request;
-      module.request = function (...args: any[]) {
+
+      module.request = function(...args: any[]) {
         const req = originalRequest.apply(this, args);
 
         let shouldForward = false;
@@ -26,6 +27,24 @@ export async function patchHttp(config: CookieForwardConfig) {
           shouldForward = true;
           req.removeHeader(TRIGGER_HEADER);
           req.removeHeader(TRIGGER_HEADER.toLowerCase());
+
+          if (config.forwardClientCookies) {
+
+            getClientCookiesHeader(config.forwardOnly)
+              .then((clientCookies) => {
+                if (clientCookies) {
+                  const existing = req.getHeader('cookie') || '';
+
+                  const finalCookies = existing
+                    ? `${existing}; ${clientCookies}`
+                    : clientCookies;
+
+                  req.setHeader('cookie', finalCookies);
+                }
+              })
+              .catch(() => {
+              });
+          }
         }
 
         req.on('response', (res: any) => {
@@ -33,7 +52,7 @@ export async function patchHttp(config: CookieForwardConfig) {
             let cookies = res.headers['set-cookie'];
             if (!Array.isArray(cookies)) cookies = [cookies];
 
-            forwardCookiesToClient(cookies, config).catch(() => {});
+            forwardCookiesToClient(cookies, config).catch(() => { });
           }
         });
 
@@ -43,5 +62,6 @@ export async function patchHttp(config: CookieForwardConfig) {
 
     patchMethod(http);
     patchMethod(https);
-  } catch (e) {}
+  } catch (e) {
+  }
 }

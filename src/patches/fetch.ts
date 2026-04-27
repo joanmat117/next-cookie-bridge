@@ -1,5 +1,5 @@
 import { TRIGGER_HEADER, PATCH_SYMBOL_FETCH } from '../constants.js';
-import { forwardCookiesToClient } from '../forwarder.js';
+import { forwardCookiesToClient, getClientCookiesHeader } from '../forwarder.js';
 import { CookieForwardConfig } from '../types.js';
 import { splitSetCookieString } from '../parser.js';
 
@@ -9,7 +9,7 @@ export function patchGlobalFetch(config: CookieForwardConfig) {
 
   const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async function (
+  globalThis.fetch = async function(
     input: RequestInfo | URL,
     init?: RequestInit,
   ) {
@@ -22,19 +22,36 @@ export function patchGlobalFetch(config: CookieForwardConfig) {
     if (headers.get(TRIGGER_HEADER) === 'true') {
       shouldForward = true;
       headers.delete(TRIGGER_HEADER);
+
+      if (config.forwardClientCookies) {
+        const clientCookies = await getClientCookiesHeader(config.forwardOnly);
+        if (clientCookies) {
+
+          const existingCookies = headers.get('cookie');
+          headers.set('cookie', existingCookies
+            ? `${existingCookies}; ${clientCookies}`
+            : clientCookies
+          );
+        }
+      }
     }
+
+    const finalInit: RequestInit = { ...init, headers };
 
     let finalInput = input;
-    const finalInit = { ...init, headers };
+    if (input instanceof Request) {
 
-    if (input instanceof Request && shouldForward) {
-      finalInput = new Request(input, { headers });
+      finalInput = new Request(input, {
+        headers: headers
+      });
     }
 
-    const response = await originalFetch(finalInput, finalInit);
+    const response = await originalFetch(finalInput, input instanceof Request ? undefined : finalInit);
 
     if (shouldForward) {
+
       let setCookies: string[] = [];
+
       if (typeof response.headers.getSetCookie === 'function') {
         setCookies = response.headers.getSetCookie();
       } else {
@@ -43,7 +60,7 @@ export function patchGlobalFetch(config: CookieForwardConfig) {
           setCookies = splitSetCookieString(rawSetCookie);
         }
       }
-      forwardCookiesToClient(setCookies, config).catch(() => {});
+      forwardCookiesToClient(setCookies, config).catch(() => { });
     }
 
     return response;

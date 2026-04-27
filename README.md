@@ -4,101 +4,100 @@
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue?style=flat-square&logo=typescript)
 
-**Next.js Cookie Bridge** is a utility designed to automate the forwarding of cookies (`Set-Cookie`) from external APIs to the client using the Next.js App Router.
+**Next.js Cookie Bridge** is a two-way cookie synchronization tool for **Server Actions, Route Handlers, and Middleware**. 
 
-It is ideal for architectures where your Next.js server acts as a proxy or BFF (Backend-for-Frontend) and you need session or authentication cookies issued by an external backend to reach the user's browser correctly.
+When your Next.js server talks to an external API, cookies often get lost in the middle. This library creates an automatic "tunnel" that forwards cookies between the user's browser and your backend in both directions.
+
+## 🤔 What does it do?
+
+It handles the cookie flow when your Next.js server acts as a bridge:
+
+1.  **Client → API (Inbound):** It collects cookies from the user's browser and injects them into your server-side `fetch` or `Axios` requests. Your backend now recognizes the user.
+2.  **API → Client (Outbound):** It intercepts `Set-Cookie` headers from your backend response and automatically applies them to the user's browser.
+
+
+
+---
 
 ## ✨ Features
 
-- **Automatic Mode:** Patches global `fetch` and `http/https` to forward cookies without extra code in every request.
-- **Local Mode:** A `fetch` wrapper for granular control.
-- **App Router Ready:** Deeply integrated with `next/headers`.
-- **Smart Filters:** Automatically omits infrastructure cookies (AWS, Cloudflare, etc.).
-- **Security:** Corrects and handles `HttpOnly`, `Secure`, and `SameSite` attributes.
+* **Two-Way Sync:** Seamless flow from Browser to API and back.
+* **Automatic Patching:** Works globally with `fetch`, `Axios`, and `node:http`.
+* **Security Control:** Use `forwardOnly` to select exactly which cookies are allowed to leave your server.
+* **Universal:** Optimized for both Node.js (via Global Patch) and Edge Runtime (via Helper).
 
 ---
 
 ## 🚀 Installation
 
 ```bash
-npm install next-cookie-bridge
-# or
-pnpm add next-cookie-bridge
+npm i next-cookie-bridge
 ```
 
 ---
 
-## 🛠️ Main Usage (Recommended)
+## 🛠️ Global Mode (Node.js)
 
-The best way to use this library is through the Next.js `instrumentation.ts` file to enable global auto-forwarding.
+The most efficient way. Set it up once in your `instrumentation.ts` and forget about it.
 
-### 1. Configure Instrumentation
-
-Create or edit your `instrumentation.ts` file in your project root (or inside `src/`):
-
+### 1. Setup
 ```typescript
 // instrumentation.ts
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { setupCookieAutoForward } = await import('next-cookie-bridge');
-    await setupCookieAutoForward({
-      forcePathRoot: true, // Optional: forces all cookies to path='/'
-      omit: ['SOME_INTERNAL_COOKIE'], // Optional: additional cookies to ignore
+    
+    setupCookieAutoForward({
+      forwardClientCookies: true, // Send browser cookies to the API, it is true by default
+      forwardOnly: ['session_id'], // Security: Only forward specific cookies
+      forcePathRoot: true,
     });
   }
 }
 ```
 
-### 2. Trigger Forwarding
-
-Once globally configured, simply add a trigger header to any `fetch` call you want to act as a bridge:
+### 2. Usage
+Just add the trigger header to any server-side request:
 
 ```typescript
-// Inside a Server Action or Route Handler
-const response = await fetch('https://api.your-backend.com/login', {
-  method: 'POST',
+// Works in Server Actions & Route Handlers
+const response = await fetch('https://api.external-backend.com/profile', {
   headers: {
-    'X-Cookie-Auto-Forward': 'true', // Activates the bridge; removed before hitting the API
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ user, pass }),
+    'X-Cookie-Auto-Forward': 'true' 
+  }
 });
 ```
 
 ---
 
-## 🧪 Local Usage (No global patch)
+## 🧪 Local Mode (Edge & Middleware)
 
-If you prefer not to affect the global `fetch` behavior, you can use the local wrapper:
+If you are working in the **Edge Runtime** or want surgical precision without global patches, use the helper.
 
 ```typescript
 import { fetchWithCookiesForward } from 'next-cookie-bridge';
 
 export async function POST() {
-  const res = await fetchWithCookiesForward('https://api.external.com/auth', {
-    method: 'POST',
+  // This helper handles the two-way sync for this specific call
+  return await fetchWithCookiesForward('https://api.external.com/auth', {
+    method: 'POST'
+  }, {
+    forwardClientCookies: true, // it is true by default
+    forwardOnly: ['auth_token']
   });
-
-  return Response.json({ success: true });
 }
 ```
 
 ---
 
-## ⚙️ Configuration (`CookieForwardConfig`)
+## ⚙️ Configuration Options
 
-| Property        | Type       | Description                                        | Default                         |
-| :-------------- | :--------- | :------------------------------------------------- | :------------------------------ |
-| `omit`          | `string[]` | List of cookie names that should NOT be forwarded. | `['AWSALB', 'JSESSIONID', ...]` |
-| `forcePathRoot` | `boolean`  | If `true`, overrides the cookie path to `/`.       | `false`                         |
-
----
-
-## ⚠️ Important Limitations
-
-1.  **Server Components (RSC):** Due to Next.js limitations, cookies cannot be set during the rendering of a component. Forwarding will fail silently with a console warning.
-2.  **Context:** This library works exclusively in **Server Actions**, **Route Handlers**, and **Middleware** (via local mode).
-3.  **Domain:** The `domain` attribute from original cookies is intentionally omitted to ensure the cookie is assigned to your Next.js application's domain.
+| Option | Type | Description |
+| :--- | :--- | :--- |
+| `forwardClientCookies` | `boolean` | If `true`, forwards browser cookies to the external API. |
+| `forwardOnly` | `string[]` | Specific cookies allowed to be sent to the API. |
+| `omit` | `string[]` | Cookies from the API to ignore (e.g., `AWSALB`). |
+| `forcePathRoot` | `boolean` | Forces `path=/` on all forwarded cookies. |
 
 ---
 
