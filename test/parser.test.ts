@@ -3,7 +3,8 @@ import { splitSetCookieString, parseSetCookieHeader } from '../src/parser';
 
 describe('Cookie Parser', () => {
   it('should split multiple cookies correctly, ignoring commas in dates', () => {
-    const raw = 'session=123; Expires=Mon, 01 Jan 2026 00:00:00 GMT; HttpOnly, theme=dark; Path=/';
+    const raw =
+      'session=123; Expires=Mon, 01 Jan 2026 00:00:00 GMT; HttpOnly, theme=dark; Path=/';
     const parts = splitSetCookieString(raw);
 
     expect(parts).toHaveLength(2);

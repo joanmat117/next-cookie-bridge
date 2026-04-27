@@ -8,7 +8,6 @@ export function splitSetCookieString(cookiesStr: string): string[] {
 
   for (let i = 0; i < cookiesStr.length; i++) {
     if (cookiesStr[i] === ',') {
-
       const lookahead = cookiesStr.slice(i + 1).trim();
 
       if (/^[a-zA-Z0-9._-]+ *=/.test(lookahead)) {

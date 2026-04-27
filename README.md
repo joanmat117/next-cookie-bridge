@@ -10,11 +10,11 @@ It is ideal for architectures where your Next.js server acts as a proxy or BFF (
 
 ## ✨ Features
 
-* **Automatic Mode:** Patches global `fetch` and `http/https` to forward cookies without extra code in every request.
-* **Local Mode:** A `fetch` wrapper for granular control.
-* **App Router Ready:** Deeply integrated with `next/headers`.
-* **Smart Filters:** Automatically omits infrastructure cookies (AWS, Cloudflare, etc.).
-* **Security:** Corrects and handles `HttpOnly`, `Secure`, and `SameSite` attributes.
+- **Automatic Mode:** Patches global `fetch` and `http/https` to forward cookies without extra code in every request.
+- **Local Mode:** A `fetch` wrapper for granular control.
+- **App Router Ready:** Deeply integrated with `next/headers`.
+- **Smart Filters:** Automatically omits infrastructure cookies (AWS, Cloudflare, etc.).
+- **Security:** Corrects and handles `HttpOnly`, `Secure`, and `SameSite` attributes.
 
 ---
 
@@ -33,6 +33,7 @@ pnpm add next-cookie-bridge
 The best way to use this library is through the Next.js `instrumentation.ts` file to enable global auto-forwarding.
 
 ### 1. Configure Instrumentation
+
 Create or edit your `instrumentation.ts` file in your project root (or inside `src/`):
 
 ```typescript
@@ -42,13 +43,14 @@ export async function register() {
     const { setupCookieAutoForward } = await import('next-cookie-bridge');
     await setupCookieAutoForward({
       forcePathRoot: true, // Optional: forces all cookies to path='/'
-      omit: ['SOME_INTERNAL_COOKIE'] // Optional: additional cookies to ignore
+      omit: ['SOME_INTERNAL_COOKIE'], // Optional: additional cookies to ignore
     });
   }
 }
 ```
 
 ### 2. Trigger Forwarding
+
 Once globally configured, simply add a trigger header to any `fetch` call you want to act as a bridge:
 
 ```typescript
@@ -57,9 +59,9 @@ const response = await fetch('https://api.your-backend.com/login', {
   method: 'POST',
   headers: {
     'X-Cookie-Auto-Forward': 'true', // Activates the bridge; removed before hitting the API
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   },
-  body: JSON.stringify({ user, pass })
+  body: JSON.stringify({ user, pass }),
 });
 ```
 
@@ -74,9 +76,9 @@ import { fetchWithCookiesForward } from 'next-cookie-bridge';
 
 export async function POST() {
   const res = await fetchWithCookiesForward('https://api.external.com/auth', {
-    method: 'POST'
+    method: 'POST',
   });
-  
+
   return Response.json({ success: true });
 }
 ```
@@ -85,10 +87,10 @@ export async function POST() {
 
 ## ⚙️ Configuration (`CookieForwardConfig`)
 
-| Property | Type | Description | Default |
-| :--- | :--- | :--- | :--- |
-| `omit` | `string[]` | List of cookie names that should NOT be forwarded. | `['AWSALB', 'JSESSIONID', ...]` |
-| `forcePathRoot` | `boolean` | If `true`, overrides the cookie path to `/`. | `false` |
+| Property        | Type       | Description                                        | Default                         |
+| :-------------- | :--------- | :------------------------------------------------- | :------------------------------ |
+| `omit`          | `string[]` | List of cookie names that should NOT be forwarded. | `['AWSALB', 'JSESSIONID', ...]` |
+| `forcePathRoot` | `boolean`  | If `true`, overrides the cookie path to `/`.       | `false`                         |
 
 ---
 

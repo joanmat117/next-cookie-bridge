@@ -32,7 +32,7 @@ export async function forwardCookiesToClient(
 
   for (const cookie of cookiesToSet) {
     try {
-      const path = config.forcePathRoot ? '/' : (cookie.path || '/');
+      const path = config.forcePathRoot ? '/' : cookie.path || '/';
 
       cookieStore.set({
         name: cookie.name,
@@ -46,7 +46,10 @@ export async function forwardCookiesToClient(
       });
     } catch (e) {
       if (isDev) {
-        console.warn(`[next-cookie-bridge] Cannot set ${cookie.name} cookie :`, e instanceof Error ? e.message : e);
+        console.warn(
+          `[next-cookie-bridge] Cannot set ${cookie.name} cookie :`,
+          e instanceof Error ? e.message : e,
+        );
       }
     }
   }

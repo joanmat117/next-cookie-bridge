@@ -9,7 +9,7 @@ export function patchGlobalFetch(config: CookieForwardConfig) {
 
   const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async function(
+  globalThis.fetch = async function (
     input: RequestInfo | URL,
     init?: RequestInit,
   ) {
@@ -43,7 +43,7 @@ export function patchGlobalFetch(config: CookieForwardConfig) {
           setCookies = splitSetCookieString(rawSetCookie);
         }
       }
-      forwardCookiesToClient(setCookies, config).catch(() => { });
+      forwardCookiesToClient(setCookies, config).catch(() => {});
     }
 
     return response;
